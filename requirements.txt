@@ -1,2 +1,6 @@
+python-decouple
+pytest
 opencv-python
 matplotlib
+fastapi
+uvicorn
