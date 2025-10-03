@@ -3,6 +3,7 @@ import asyncio
 import cv2
 import numpy as np
 
+import settings
 from src.api.servers.process import ProcessServer
 from src.api.video_stream.mock_video_capture import MockVideoCapture
 from src.core.detectors.band_position import EdgeProcessing, process_band
@@ -24,14 +25,14 @@ input_cap_1 = MockVideoCapture(name="input", buffer_size=5, fps=60, no_signal_pa
 output_cap_1 = MockVideoCapture(name="output", buffer_size=5, fps=60, no_signal_pattern="rand")
 mask_cap_1 = MockVideoCapture(name="mask", buffer_size=5, fps=60, no_signal_pattern="rand")
 cap_1 = cv2.VideoCapture(2)
-pr_1 = EdgeProcessing(focus_box=Box(50, 200, 300, 100),
-                      hue_locus=Locus(50, 250),
+pr_1 = EdgeProcessing(focus_box=Box(*settings.BAND_FOCUS_BOX), # Box(50, 200, 300, 100),
+                      hue_locus=Locus(*settings.BAND_HUE_FOCUS), # Locus(50, 250),
                       context=Context(mask_area_ratio_validation_threshold=.1,
                                       masked_area_ratio_validation_threshold=.15,
                                       reset_steps=10))
 server = BandEdgeServer(name="Band position process",
                         cameras=[input_cap_1, output_cap_1, mask_cap_1],
-                        frame_width=480, frame_height=320, fps=60, processing=pr_1)
+                        frame_width=400, frame_height=300, fps=60, processing=pr_1)
 
 def process_band_edge():
     while True:

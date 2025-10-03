@@ -6,10 +6,11 @@ import logging
 import cv2
 import numpy as np
 
-from src.core.detectors.image_methods import segment_process, triplicate, set_process_eta
+from src.core.detectors.image_methods import segment_process, triplicate, set_process_eta, blur_unfocused, \
+    put_icon_in_image
 from src.core.detectors.models import Processing, ExceptionReport, Box
 from src.core.meassurements.average import AveragedMeasurement
-
+from src.resources.graphics.cross import cross
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +39,12 @@ def process_buttler(processing: ButtlerProcessing):
 
         reel_dimensions(processing)
 
-        processing.output = processing.input.copy()
+        processing.output = blur_unfocused(processing.input.copy(), processing.focus_box)
+        # processing.output = processing.input.copy()
         draw_reel_box(processing, image=processing.output)
         # mask = np.dstack((processing.mask, processing.mask, processing.mask))
         # print(processing.state)
+        put_icon_in_image(processing.output, cross(), processing.hue_locus)
         processing.exception = None
         return processing.output
     except Exception as e:
@@ -49,7 +52,12 @@ def process_buttler(processing: ButtlerProcessing):
         processing.state.focused = False
         processing.state.steps += 1
         processing.exception = ExceptionReport(e, format_exc())
+        if processing.mask is None:
+            op = processing.input.copy() // 4 + 127
+            put_icon_in_image(op, cross(), processing.hue_locus)
+            return op
         now_mask = triplicate(processing.mask) // 2
+        # put_icon_in_image(now_mask, cross(), processing.hue_locus)
         return now_mask
 
 
@@ -60,9 +68,10 @@ def draw_reel_box(processing, image=None):
 
 
 def reel_dimensions(processing: ButtlerProcessing):
+    f_x, f_y, f_w, f_h = processing.focus_box if processing.focus_box else (0, 0, 0, 0)
     x, y, w, h = processing.mask_box
     processing.reel.diameter.update(h)  # horiz_line(processing.hue_input[y0:y0+h, x0:x0+w, 1])
     radius = processing.reel.diameter.value() // 2
     processing.reel.width.update(np.sum(processing.mask[radius+y, :] > 0))
     reel_x0 = np.sum(processing.mask[radius+y,x:x+processing.reel.width.value()] < 1)
-    processing.reel.box = x + reel_x0, y, processing.reel.width.value(), processing.reel.diameter.value()
+    processing.reel.box = x + f_x + reel_x0, y + f_y, processing.reel.width.value(), processing.reel.diameter.value()

@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import matplotlib
 
-from src.core.detectors.models import Context, Processing, Box, ExceptionReport
+from src.core.detectors.models import Context, Processing, Box, ExceptionReport, Locus
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -135,6 +135,8 @@ def segment_by_hue(image_hsv, mid_hue):
 
 
 def stamp(image, text, corner="bottom", org=None, margin=50):
+    if image is None:
+        return
     org_dispatch = {
         'bottom': lambda image: (margin, image.shape[0] - margin),
         'top': lambda image: (margin, margin),
@@ -159,27 +161,21 @@ def blur_unfocused(image, focus_box: Box):
     blured[focus_box.image_slice] = image[focus_box.image_slice]
     return blured
 
-def process_image(processing: Processing):
-    t0 = timeit.default_timer()
-    try:
-        if not segment_process(processing):
-            raise RuntimeError("Segment process failed")
-        processing.output = processing.input.copy()[(processing.mask_box and processing.mask_box.image_slice)
-                                                    or (slice(None), slice(None), slice(None))]
-        # mask = np.dstack((processing.mask, processing.mask, processing.mask))
-        # print(processing.state)
-        return processing.output
-    except Exception as e:
-        # print(processing.state)
-        processing.state.focused = False
-        processing.state.steps += 1
-        # print(type(e), e, f"{processing.state.steps} steps")
-        now_mask = np.dstack((processing.mask, processing.mask, processing.mask)) // 2
-        processing.exception = ExceptionReport(e, format_exc())
-        return np.vstack((processing.focus, now_mask))
-    finally:
-        t1 = timeit.default_timer()
-        processing.context.eta = (t1 - t0) * 1000
+
+def put_icon_in_image(image:np.ndarray, icon:np.ndarray, locus:Locus):
+    x, y = locus
+    rad_x, rad_y = icon.shape[1] // 2, icon.shape[0] // 2
+    icon_x, icon_y = rad_x, rad_y
+    icon_slice = (slice(icon_y - rad_y, icon_y + rad_y + 1),
+                  slice(icon_x - rad_x, icon_x + rad_x + 1),
+                  slice(None, None))
+    slice_x ,slice_y = slice(x - rad_x, x + rad_x + 1), slice(y - rad_y, y + rad_y + 1)
+    # slice_x = slice(max(slice_x[0], 0), min(slice_x[1], image.shape[1]))
+    # slice_y = slice(max(slice_y[0], 0), min(slice_y[1], image.shape[0]))
+    place_icon = icon[*icon_slice]
+    place_icon[np.all(place_icon==0, axis=2)] = image[slice_y,slice_x,:][np.all(place_icon==0, axis=2)]
+    image[slice_y,slice_x,:] = place_icon
+    return image
 
 
 def triplicate(mask):
@@ -212,6 +208,29 @@ def set_process_eta(arg: Processing | Callable):
         return decorator
     elif isinstance(arg, Callable):
         return decorator(arg)
+
+
+def process_image(processing: Processing):
+    t0 = timeit.default_timer()
+    try:
+        if not segment_process(processing):
+            raise RuntimeError("Segment process failed")
+        processing.output = processing.input.copy()[(processing.mask_box and processing.mask_box.image_slice)
+                                                    or (slice(None), slice(None), slice(None))]
+        # mask = np.dstack((processing.mask, processing.mask, processing.mask))
+        # print(processing.state)
+        return processing.output
+    except Exception as e:
+        # print(processing.state)
+        processing.state.focused = False
+        processing.state.steps += 1
+        # print(type(e), e, f"{processing.state.steps} steps")
+        now_mask = np.dstack((processing.mask, processing.mask, processing.mask)) // 2
+        processing.exception = ExceptionReport(e, format_exc())
+        return np.vstack((processing.focus, now_mask))
+    finally:
+        t1 = timeit.default_timer()
+        processing.context.eta = (t1 - t0) * 1000
 
 
 if __name__ == "__main__":

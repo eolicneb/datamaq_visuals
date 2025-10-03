@@ -82,17 +82,32 @@ class Box:
 class Locus:
     x: Optional[int] = None
     y: Optional[int] = None
+    _x: Optional[int] = None
+    _y: Optional[int] = None
+
+    def setdefault(self, x=None, y=None):
+        self._x = x
+        self._y = y
+
+    def __iter__(self):
+        for value in self._get_values():
+            yield value
+
+    def _get_values(self):
+        return self._x if self.x is None else self.x, self._y if self.y is None else self.y
 
     @property
     def slice(self):
-        return self and (self.y, self.x) or None
+        x, y = self._get_values()
+        return self and (y, x) or None
 
     @property
     def image_slice(self):
         return self.slice and tuple((*self.slice, slice(None)))
 
     def __bool__(self):
-        return self.x is not None and self.y is not None
+        x, y = self._get_values()
+        return x is not None and y is not None
 
 
 @dataclass
@@ -113,14 +128,31 @@ class Processing:
 
     def __post_init__(self):
         self.state.context = self.context
+        self._set_default_hue_locus()
+
+    def _set_default_hue_locus(self):
+        if self.input is not None:
+            if self.hue_locus is not None:
+                self.hue_locus.setdefault(self.input.shape[1]//2, self.input.shape[0]//2)
+            else:
+                self.hue_locus = Locus(self.input.shape[1]//2, self.input.shape[0]//2)
 
     @property
     def hue_locus_slice(self):
-        if self.hue_locus is None and self.input is not None:
-            return self.input.shape[0]//2, self.input.shape[1]//2
-        if self.focus_box is None:
-            return self.hue_locus.slice
-        return Locus(self.hue_locus.y - self.focus_box.top, self.hue_locus.x - self.focus_box.left).slice
+        self._set_default_hue_locus()
+        if self.focus is None:
+            if self.input is None:
+                return
+            shape = self.input.shape[:2]
+            focus_box = Box() if self.focus_box is None else self.focus_box
+        else:
+            shape = self.focus.shape[:2]
+            focus_box = Box()
+        x, y = self.hue_locus
+        hue_x, hue_y = x - focus_box.left, y - focus_box.top
+        hue_x = min(hue_x, focus_box.width or shape[1])
+        hue_y = min(hue_y, focus_box.height or shape[0])
+        return Locus(hue_x, hue_y).slice
 
     @property
     def hue_locus_image_slice(self):
