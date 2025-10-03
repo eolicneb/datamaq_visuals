@@ -18,7 +18,7 @@ class BandEdgeServer(ProcessServer):
         self.app.get("/edge")(self.get_band_edge)
 
     async def get_band_edge(self):
-        return {"edge": self.processing.edge.value()}
+        return {"position": self.processing.edge.value()}
 
 
 input_cap_1 = MockVideoCapture(name="input", buffer_size=5, fps=60, no_signal_pattern="rand")
