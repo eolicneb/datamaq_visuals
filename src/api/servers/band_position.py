@@ -24,7 +24,7 @@ class BandEdgeServer(ProcessServer):
 input_cap_1 = MockVideoCapture(name="input", buffer_size=5, fps=60, no_signal_pattern="rand")
 output_cap_1 = MockVideoCapture(name="output", buffer_size=5, fps=60, no_signal_pattern="rand")
 mask_cap_1 = MockVideoCapture(name="mask", buffer_size=5, fps=60, no_signal_pattern="rand")
-cap_1 = cv2.VideoCapture(2)
+cap_1 = cv2.VideoCapture(0)
 pr_1 = EdgeProcessing(focus_box=Box(*settings.BAND_FOCUS_BOX), # Box(50, 200, 300, 100),
                       hue_locus=Locus(*settings.BAND_HUE_FOCUS), # Locus(50, 250),
                       context=Context(mask_area_ratio_validation_threshold=.1,

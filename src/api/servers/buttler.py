@@ -24,7 +24,7 @@ class ButtlerServer(ProcessServer):
 input_cap_0 = MockVideoCapture(name="input", buffer_size=5, fps=60, no_signal_pattern="rand")
 output_cap_0 = MockVideoCapture(name="output", buffer_size=5, fps=60, no_signal_pattern="rand")
 mask_cap_0 = MockVideoCapture(name="mask", buffer_size=5, fps=60, no_signal_pattern="rand")
-cap_0 = cv2.VideoCapture(0)
+cap_0 = cv2.VideoCapture(2)
 pr = ButtlerProcessing(focus_box=Box(*settings.BUTTLER_FOCUS_BOX),
                        hue_locus=Locus(*settings.BUTTLER_HUE_FOCUS),
                        context=Context(mask_area_ratio_validation_threshold=.1,
